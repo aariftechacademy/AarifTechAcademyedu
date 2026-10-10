@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
@@ -27,6 +27,21 @@
     .navlinks a{font-weight:600;color:#344054}
     .navlinks a:hover{color:#0756c9}
     .menu{display:none;border:0;background:none;font-size:28px}
+    .signin-btn{border:0;cursor:pointer;padding:10px 16px;border-radius:10px;background:#0756c9;color:#fff;font-weight:700;font-size:14px}
+    .modal-backdrop{display:none;position:fixed;inset:0;background:#10182899;z-index:1000;align-items:center;justify-content:center;padding:18px}
+    .modal-backdrop.show{display:flex}
+    .login-modal{width:min(430px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:22px;padding:28px;box-shadow:0 24px 80px #0003;position:relative}
+    .modal-close{position:absolute;right:16px;top:12px;border:0;background:#f2f4f7;border-radius:50%;width:34px;height:34px;font-size:22px;cursor:pointer}
+    .login-modal h2{font-size:27px;color:#172033;margin:8px 0}
+    .login-modal .subtext{color:#667085;font-size:14px;margin-bottom:18px}
+    .login-modal label{display:block;font-size:14px;font-weight:700;margin:12px 0 5px}
+    .login-modal input{width:100%;padding:12px;border:1px solid #d0d5dd;border-radius:10px;font:inherit}
+    .login-action{width:100%;padding:12px;border:0;border-radius:10px;background:#0756c9;color:#fff;font-weight:700;cursor:pointer;margin-top:14px;font-size:15px}
+    .google-action{width:100%;padding:11px;border:1px solid #d0d5dd;border-radius:10px;background:#fff;color:#172033;font-weight:700;cursor:pointer;margin-top:10px;font-size:15px}
+    .login-links{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;font-size:14px}
+    .login-links button{border:0;background:none;color:#0756c9;cursor:pointer;font-weight:700}
+    .login-message{margin-top:12px;font-size:13px;color:#b42318;min-height:18px}
+    body.modal-open{overflow:hidden}
     .hero{padding:78px 0 70px;background:linear-gradient(135deg,#eaf4ff,#fff)}
     .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:45px;align-items:center}
     .tag{display:inline-block;padding:7px 13px;border-radius:30px;background:#dceeff;color:#0756c9;font-weight:700;font-size:14px;margin-bottom:16px}
@@ -68,6 +83,7 @@
     @media(max-width:850px){
       .navlinks{display:none;position:absolute;top:72px;left:0;right:0;background:#fff;padding:18px 5%;flex-direction:column;align-items:flex-start;box-shadow:0 10px 20px #0001}
       .navlinks.show{display:flex}
+      .navlinks .signin-btn{width:100%}
       .menu{display:block}
       .hero-grid,.about-grid,.contact-grid{grid-template-columns:1fr}
       .cards{grid-template-columns:repeat(2,1fr)}
@@ -92,7 +108,8 @@
         <a href="#courses">Courses</a>
         <a href="#offer">Offer</a>
         <a href="#about">About</a>
-        <a href="#contact">Contact</a>
+        <a href="#registration">Contact</a>
+        <button class="signin-btn" type="button" id="openLogin">Sign In</button>
       </div>
     </nav>
   </div>
@@ -172,10 +189,6 @@
   </div>
 </section>
 
-<section id="contact">
-  <div class="container">
-    </section>
-
 <section id="registration">
   <div class="container">
     <div class="section-title">
@@ -218,12 +231,36 @@
     @aariftechacadem
   </a>
 </div>
-        <p class="small"style=color:#0756c9;fond-weight:600;margin-top:12px;">Aarif Tech Academy ko social media par follow kare aur latest updates paayein.</p>
+        <p class="small" style="color:#0756c9;font-weight:600;margin-top:12px;">Aarif Tech Academy ko social media par follow kare aur latest updates paayein.</p>
       </div>
     </div>
   </div>
 </section>
 </main>
+
+
+<div class="modal-backdrop" id="loginBackdrop" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <div class="login-modal">
+    <button class="modal-close" type="button" id="closeLogin" aria-label="Close login">×</button>
+    <div class="brand" style="font-size:16px;margin-bottom:10px"><img src="logo.png" alt="" class="logo-img" style="width:38px;height:38px"> Aarif Tech Academy</div>
+    <h2 id="loginTitle">Welcome back!</h2>
+    <p class="subtext">Sign in to your academy account.</p>
+    <button class="google-action" type="button" id="googleLogin">Continue with Google</button>
+    <div style="text-align:center;color:#98a2b3;margin:14px 0;font-size:13px">OR CONTINUE WITH EMAIL</div>
+    <form id="emailLoginForm">
+      <label for="loginEmail">Email address</label>
+      <input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+      <button class="login-action" type="submit" id="emailLoginBtn">Sign In</button>
+    </form>
+    <div class="login-links">
+      <button type="button" id="forgotPassword">Forgot password?</button>
+      <button type="button" id="createAccount">Create account</button>
+    </div>
+    <p class="login-message" id="loginMessage" role="status" aria-live="polite"></p>
+  </div>
+</div>
 
 <footer>
   <div class="container">
@@ -236,6 +273,44 @@
 <script>
   document.querySelectorAll('.navlinks a').forEach(a=>{
     a.addEventListener('click',()=>document.querySelector('.navlinks').classList.remove('show'));
+  });
+
+  const loginBackdrop = document.getElementById('loginBackdrop');
+  const loginMessage = document.getElementById('loginMessage');
+  function openLoginModal(){
+    loginBackdrop.classList.add('show');
+    document.body.classList.add('modal-open');
+    loginMessage.textContent = '';
+    document.getElementById('loginEmail').focus();
+  }
+  function closeLoginModal(){
+    loginBackdrop.classList.remove('show');
+    document.body.classList.remove('modal-open');
+  }
+  document.getElementById('openLogin').addEventListener('click', openLoginModal);
+  document.getElementById('closeLogin').addEventListener('click', closeLoginModal);
+  loginBackdrop.addEventListener('click', e => {
+    if(e.target === loginBackdrop) closeLoginModal();
+  });
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && loginBackdrop.classList.contains('show')) closeLoginModal();
+  });
+
+  // Firebase authentication is not connected yet. Add your Firebase project's
+  // web configuration and enable Email/Password and Google providers in Firebase Console.
+  function firebaseSetupNotice(){
+    loginMessage.textContent = 'Login UI is ready, but Firebase setup is required to sign in. Add your Firebase web config first.';
+  }
+  document.getElementById('emailLoginForm').addEventListener('submit', e => {
+    e.preventDefault();
+    firebaseSetupNotice();
+  });
+  document.getElementById('googleLogin').addEventListener('click', firebaseSetupNotice);
+  document.getElementById('forgotPassword').addEventListener('click', () => {
+    loginMessage.textContent = 'Password reset will work after Firebase is connected.';
+  });
+  document.getElementById('createAccount').addEventListener('click', () => {
+    loginMessage.textContent = 'Account creation will work after Firebase is connected.';
   });
 </script>
 </body>
