@@ -36,7 +36,7 @@
     .login-modal .subtext{color:#667085;font-size:14px;margin-bottom:18px}
     .login-modal label{display:block;font-size:14px;font-weight:700;margin:12px 0 5px}
     .login-modal input{width:100%;padding:12px;border:1px solid #d0d5dd;border-radius:10px;font:inherit}
-    .login-action{width:100%;padding:12px;border:0;border-radius:10px;background:#0756c9;color:#fff;font-weight:700;cursor:pointer;margin-top:14px;font-size:15px}
+    .login-action{width:100%;padding:12px;border:0;border-radius:10px;background:#0756c9;color:#fff;font-weight:700;cursor:pointer;margin-top:14px;font-size:15px}.login-action:disabled{opacity:.65;cursor:wait}
     .google-action{width:100%;padding:11px;border:1px solid #d0d5dd;border-radius:10px;background:#fff;color:#172033;font-weight:700;cursor:pointer;margin-top:10px;font-size:15px}
     .login-links{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;font-size:14px}
     .login-links button{border:0;background:none;color:#0756c9;cursor:pointer;font-weight:700}
@@ -274,9 +274,40 @@
   document.querySelectorAll('.navlinks a').forEach(a=>{
     a.addEventListener('click',()=>document.querySelector('.navlinks').classList.remove('show'));
   });
+</script>
 
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword,
+    createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged,
+    signOut
+  } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBspW4959DXO_1PbMJfHfChS9MFUg6Ntu0",
+    authDomain: "aariftechacademy-2e603.firebaseapp.com",
+    projectId: "aariftechacademy-2e603",
+    storageBucket: "aariftechacademy-2e603.firebasestorage.app",
+    messagingSenderId: "65861664062",
+    appId: "1:65861664062:web:70dc8682b932171638406f"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const googleProvider = new GoogleAuthProvider();
   const loginBackdrop = document.getElementById('loginBackdrop');
   const loginMessage = document.getElementById('loginMessage');
+  const emailForm = document.getElementById('emailLoginForm');
+  const emailButton = document.getElementById('emailLoginBtn');
+  const createButton = document.getElementById('createAccount');
+  const forgotButton = document.getElementById('forgotPassword');
+  let createMode = false;
+
+  function showMessage(message, isError = false) {
+    loginMessage.textContent = message;
+    loginMessage.style.color = isError ? '#b42318' : '#067647';
+  }
   function openLoginModal(){
     loginBackdrop.classList.add('show');
     document.body.classList.add('modal-open');
@@ -287,30 +318,105 @@
     loginBackdrop.classList.remove('show');
     document.body.classList.remove('modal-open');
   }
+  function setCreateMode(enabled) {
+    createMode = enabled;
+    document.getElementById('loginTitle').textContent = enabled ? 'Create your account' : 'Welcome back!';
+    document.querySelector('.login-modal .subtext').textContent = enabled ? 'Create your Aarif Tech Academy account.' : 'Sign in to your academy account.';
+    emailButton.textContent = enabled ? 'Create Account' : 'Sign In';
+    createButton.textContent = enabled ? 'Back to Sign In' : 'Create account';
+    document.getElementById('loginPassword').autocomplete = enabled ? 'new-password' : 'current-password';
+    showMessage('');
+  }
+  function friendlyError(error) {
+    const code = error?.code || '';
+    const messages = {
+      'auth/invalid-email': 'Email address sahi format mein likhein.',
+      'auth/missing-password': 'Password enter karein.',
+      'auth/weak-password': 'Password kam se kam 6 characters ka rakhein.',
+      'auth/email-already-in-use': 'Is email se account pehle se bana hua hai. Sign In karein.',
+      'auth/invalid-credential': 'Email ya password galat hai. Dobara check karein.',
+      'auth/user-not-found': 'Is email ka account nahi mila. Pehle account banayein.',
+      'auth/wrong-password': 'Password galat hai. Dobara try karein.',
+      'auth/popup-closed-by-user': 'Google sign-in window band ho gayi. Dobara try karein.',
+      'auth/popup-blocked': 'Browser ne popup block kiya. Popup allow karke dobara try karein.',
+      'auth/unauthorized-domain': 'Ye website Firebase mein authorized nahi hai. Firebase Console mein Authorized domains check karein.',
+      'auth/operation-not-allowed': 'Firebase Console mein Email/Password ya Google sign-in provider enable karein.',
+      'auth/network-request-failed': 'Internet connection check karke dobara try karein.'
+    };
+    return messages[code] || `Sign-in nahi ho saka (${code || 'unknown error'}). Firebase Authentication settings check karein.`;
+  }
+
   document.getElementById('openLogin').addEventListener('click', openLoginModal);
   document.getElementById('closeLogin').addEventListener('click', closeLoginModal);
-  loginBackdrop.addEventListener('click', e => {
-    if(e.target === loginBackdrop) closeLoginModal();
-  });
-  document.addEventListener('keydown', e => {
-    if(e.key === 'Escape' && loginBackdrop.classList.contains('show')) closeLoginModal();
+  loginBackdrop.addEventListener('click', e => { if (e.target === loginBackdrop) closeLoginModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && loginBackdrop.classList.contains('show')) closeLoginModal(); });
+
+  emailForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    emailButton.disabled = true;
+    emailButton.textContent = createMode ? 'Creating account…' : 'Signing in…';
+    try {
+      if (createMode) {
+        await createUserWithEmailAndPassword(auth, email, password);
+        showMessage('Account ban gaya! Aap sign in ho gaye hain.');
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        showMessage('Successfully sign in ho gaye hain.');
+      }
+    } catch (error) {
+      showMessage(friendlyError(error), true);
+    } finally {
+      emailButton.disabled = false;
+      emailButton.textContent = createMode ? 'Create Account' : 'Sign In';
+    }
   });
 
-  // Firebase authentication is not connected yet. Add your Firebase project's
-  // web configuration and enable Email/Password and Google providers in Firebase Console.
-  function firebaseSetupNotice(){
-    loginMessage.textContent = 'Login UI is ready, but Firebase setup is required to sign in. Add your Firebase web config first.';
-  }
-  document.getElementById('emailLoginForm').addEventListener('submit', e => {
-    e.preventDefault();
-    firebaseSetupNotice();
+  document.getElementById('googleLogin').addEventListener('click', async () => {
+    showMessage('Google sign-in khul raha hai…');
+    try {
+      await signInWithPopup(auth, googleProvider);
+      showMessage('Google se successfully sign in ho gaye hain.');
+    } catch (error) {
+      showMessage(friendlyError(error), true);
+    }
   });
-  document.getElementById('googleLogin').addEventListener('click', firebaseSetupNotice);
-  document.getElementById('forgotPassword').addEventListener('click', () => {
-    loginMessage.textContent = 'Password reset will work after Firebase is connected.';
+
+  forgotButton.addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) {
+      showMessage('Password reset ke liye pehle Email address enter karein.', true);
+      document.getElementById('loginEmail').focus();
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      showMessage('Password reset email bhej diya gaya hai. Inbox aur Spam folder check karein.');
+    } catch (error) {
+      showMessage(friendlyError(error), true);
+    }
   });
-  document.getElementById('createAccount').addEventListener('click', () => {
-    loginMessage.textContent = 'Account creation will work after Firebase is connected.';
+
+  createButton.addEventListener('click', () => setCreateMode(!createMode));
+
+  onAuthStateChanged(auth, user => {
+    const openButton = document.getElementById('openLogin');
+    if (user) {
+      openButton.textContent = 'Sign Out';
+      openButton.onclick = async () => {
+        try {
+          await signOut(auth);
+          showMessage('Sign out ho gaye hain.');
+          setCreateMode(false);
+        } catch (error) { showMessage(friendlyError(error), true); }
+      };
+      openButton.removeEventListener('click', openLoginModal);
+    } else {
+      openButton.textContent = 'Sign In';
+      openButton.onclick = null;
+      openButton.addEventListener('click', openLoginModal);
+    }
   });
 </script>
 </body>
