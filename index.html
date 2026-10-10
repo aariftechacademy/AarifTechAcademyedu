@@ -55,6 +55,36 @@
     .dashboard-tag{display:inline-block;padding:4px 9px;border-radius:20px;background:#eef8ff;color:#0756c9;font-size:12px;font-weight:700;margin-top:8px}
     .dashboard-signout{border:1px solid #fda29b;color:#b42318;background:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;margin-top:18px}
     @media(max-width:520px){.dashboard-modal{padding:18px}.dashboard-grid{grid-template-columns:1fr}.dashboard-header h2{font-size:22px}}
+
+    .learning-area{margin-top:16px}
+    .learning-summary{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#eaf4ff;border:1px solid #d4e7ff;border-radius:14px;padding:14px 16px;margin-bottom:16px}
+    .progress-track{height:9px;background:#d5e1ef;border-radius:20px;overflow:hidden;margin-top:8px;width:100%}
+    .progress-fill{height:100%;width:0;background:#0756c9;border-radius:20px;transition:width .2s}
+    .module-list{display:grid;gap:12px}
+    .module-box{background:#fff;border:1px solid #e3eaf4;border-radius:14px;overflow:hidden}
+    .module-toggle{width:100%;border:0;background:#fff;padding:15px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer;font:inherit;color:#172033}
+    .module-toggle strong{display:block}
+    .module-toggle small{display:block;color:#667085;margin-top:3px}
+    .module-lessons{display:none;padding:0 14px 14px;border-top:1px solid #edf1f6}
+    .module-box.open .module-lessons{display:block}
+    .lesson-row{display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid #edf1f6}
+    .lesson-row:last-child{border-bottom:0}
+    .lesson-title{flex:1;min-width:0}
+    .lesson-title strong{display:block;font-size:14px}
+    .lesson-title small{color:#667085;font-size:12px}
+    .lesson-open,.lesson-done{border:1px solid #cfe0f5;border-radius:9px;padding:8px 10px;background:#fff;color:#0756c9;font-weight:700;cursor:pointer;white-space:nowrap}
+    .lesson-done{background:#ecfdf3;border-color:#abefc6;color:#067647}
+    .lesson-view{display:none;background:#f8fbff;border:1px solid #dbeafe;border-radius:14px;padding:18px;margin-top:14px}
+    .lesson-view.show{display:block}
+    .lesson-view h3{margin-bottom:8px}
+    .lesson-view p{color:#475467;margin:8px 0}
+    .lesson-view ul{padding-left:18px;list-style:disc;margin:8px 0 14px}
+    .lesson-view li{margin:5px 0}
+    .lesson-view li::before{content:none}
+    .lesson-view .lesson-done{margin-top:8px}
+    .course-note{font-size:12px;color:#667085;margin-top:12px}
+    @media(max-width:520px){.lesson-row{align-items:flex-start;flex-wrap:wrap}.lesson-open,.lesson-done{margin-left:28px}.module-toggle{padding:13px}}
+
     body.modal-open{overflow:hidden}
     .hero{padding:78px 0 70px;background:linear-gradient(135deg,#eaf4ff,#fff)}
     .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:45px;align-items:center}
@@ -293,11 +323,19 @@
         <span class="dashboard-tag">Signed in</span>
       </div>
     </div>
-    <div class="dashboard-grid">
-      <div class="dashboard-card"><h3>📚 My Course</h3><p>Complete Computer Course</p><span class="dashboard-tag">3 Months · Coming Soon</span></div>
-      <div class="dashboard-card"><h3>🖥️ Learning Modules</h3><p>Computer Basics, Typing, MS Office, Internet & Digital Skills.</p></div>
-      <div class="dashboard-card"><h3>📈 Learning Progress</h3><p>Progress tracking will appear here when lessons and progress saving are connected.</p><span class="dashboard-tag">Not started</span></div>
-      <div class="dashboard-card"><h3>💬 Need Help?</h3><p>For course and account queries, contact the academy team on WhatsApp.</p><a class="btn" style="margin-top:10px" href="https://wa.me/916392674230" target="_blank" rel="noopener">Contact Academy</a></div>
+    <div class="learning-area">
+      <div class="learning-summary">
+        <div style="flex:1;min-width:180px"><strong>📚 My Course: Complete Computer Course</strong><div id="progressLabel" style="font-size:13px;color:#475467;margin-top:3px">0 of 12 lessons completed</div><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div></div>
+        <span class="dashboard-tag" id="progressPercent">0% complete</span>
+      </div>
+      <h3 style="font-size:18px;margin:0 0 10px">🖥️ Course Modules & Lessons</h3>
+      <div class="module-list" id="moduleList"></div>
+      <div class="lesson-view" id="lessonView" aria-live="polite"><h3 id="lessonViewTitle">Lesson</h3><div id="lessonViewBody"></div><button type="button" class="lesson-done" id="markLessonDone">✓ Mark as completed</button></div>
+      <p class="course-note">Progress is currently saved in this browser on this device. Cloud sync across devices can be added after Firestore Database and its security rules are configured.</p>
+      <div class="dashboard-grid" style="margin-top:16px">
+        <div class="dashboard-card"><h3>⌨️ Typing Practice</h3><p>Practice daily and record your progress as you complete the lessons.</p><span class="dashboard-tag">Practice module</span></div>
+        <div class="dashboard-card"><h3>💬 Need Help?</h3><p>For course and account queries, contact the academy team on WhatsApp.</p><a class="btn" style="margin-top:10px" href="https://wa.me/916392674230" target="_blank" rel="noopener">Contact Academy</a></div>
+      </div>
     </div>
     <button class="dashboard-signout" type="button" id="dashboardSignOut">Sign Out</button>
     <p class="login-message" id="dashboardMessage" role="status" aria-live="polite"></p>
@@ -447,12 +485,105 @@
   const dashboardMessage = document.getElementById('dashboardMessage');
   let currentUser = null;
 
+  // Beginner-friendly course outline. Lesson text is introductory; add academy videos/files later.
+  const courseModules = [
+    { title: 'Module 1: Computer Basics', desc: 'Computer fundamentals and parts', lessons: [
+      {id:'basics-1',title:'What is a Computer?',duration:'5 min',body:'A computer is an electronic machine that accepts data, processes it according to instructions, and produces information.',points:['Input: data entered into the computer','Processing: CPU works on the data','Output: the result shown to the user','Storage: data and files can be saved for later']},
+      {id:'basics-2',title:'Input and Output Devices',duration:'7 min',body:'Input devices help us enter data. Output devices present the processed result.',points:['Input examples: keyboard, mouse, scanner, microphone','Output examples: monitor, printer, speakers, projector','Touchscreens can work as both input and output devices']},
+      {id:'basics-3',title:'CPU, RAM and Storage',duration:'8 min',body:'The CPU executes instructions, RAM temporarily holds data in use, and storage keeps files for longer periods.',points:['CPU: executes instructions','RAM: temporary working memory; contents are lost when power is off','SSD/HDD: long-term storage','ROM stores essential firmware instructions']}
+    ]},
+    { title: 'Module 2: Operating System & Files', desc: 'Windows, folders and file management', lessons: [
+      {id:'os-1',title:'What is an Operating System?',duration:'6 min',body:'An operating system manages computer hardware and provides an environment for applications.',points:['Examples: Microsoft Windows, macOS, Linux, Android','It manages files, memory, devices and running applications','It provides the user interface']},
+      {id:'os-2',title:'Files, Folders and Extensions',duration:'7 min',body:'A file stores information, while a folder helps organise files. An extension often indicates a file type.',points:['.docx: Word document','.xlsx: Excel workbook','.pptx: PowerPoint presentation','.pdf: Portable Document Format']},
+      {id:'os-3',title:'Keyboard Shortcuts',duration:'6 min',body:'Keyboard shortcuts help perform common tasks quickly.',points:['Ctrl+C: Copy','Ctrl+V: Paste','Ctrl+X: Cut','Ctrl+Z: Undo','Alt+Tab: Switch between open apps']}
+    ]},
+    { title: 'Module 3: MS Office', desc: 'Word, Excel and PowerPoint basics', lessons: [
+      {id:'office-1',title:'MS Word Basics',duration:'8 min',body:'Microsoft Word is used to create and format text documents.',points:['Use styles for consistent headings','Set margins and page orientation in Layout','Use Save As to choose a file name and location']},
+      {id:'office-2',title:'MS Excel Basics',duration:'8 min',body:'Excel organises data in rows and columns and can calculate values with formulas.',points:['A cell is identified by a column letter and row number, such as A1','Formulas begin with =','SUM adds values, for example =SUM(A1:A5)']},
+      {id:'office-3',title:'PowerPoint Basics',duration:'8 min',body:'PowerPoint is used to create slide-based presentations.',points:['Keep each slide focused on one main idea','Use Slide Master for consistent design','Use Slide Show to present your work']}
+    ]},
+    { title: 'Module 4: Internet & Digital Skills', desc: 'Browser, email and online safety', lessons: [
+      {id:'digital-1',title:'Internet and Web Browser',duration:'6 min',body:'The internet connects networks worldwide. A web browser opens and displays websites.',points:['Examples of browsers: Chrome, Edge, Firefox','A URL is a web address','HTTPS encrypts the connection between browser and website']},
+      {id:'digital-2',title:'Email Basics',duration:'7 min',body:'Email is used to send messages and files over the internet.',points:['To: main recipient','CC: visible additional recipients','BCC: recipients hidden from other recipients','Check attachments and recipient addresses before sending']},
+      {id:'digital-3',title:'Online Safety',duration:'7 min',body:'Protect accounts and personal information when using online services.',points:['Use unique, strong passwords','Never share one-time passwords or recovery codes','Check links and sender details before opening','Use two-step verification when available']}
+    ]}
+  ];
+  let activeLessonId = null;
+  let completedLessons = new Set();
+  function progressStorageKey(){ return 'ata_course_progress_' + (currentUser?.uid || 'guest'); }
+  function loadProgress(){
+    try { const saved = JSON.parse(localStorage.getItem(progressStorageKey()) || '[]'); completedLessons = new Set(Array.isArray(saved) ? saved : []); }
+    catch { completedLessons = new Set(); }
+    renderCourseModules();
+    updateProgressDisplay();
+  }
+  function saveProgress(){
+    try { localStorage.setItem(progressStorageKey(), JSON.stringify([...completedLessons])); }
+    catch { dashboardMessage.textContent = 'Browser progress save nahi ho saka. Browser storage settings check karein.'; }
+    updateProgressDisplay();
+  }
+  function allLessons(){ return courseModules.flatMap(m => m.lessons); }
+  function updateProgressDisplay(){
+    const total = allLessons().length;
+    const done = completedLessons.size;
+    const percent = Math.round(done / total * 100);
+    document.getElementById('progressLabel').textContent = `${done} of ${total} lessons completed`;
+    document.getElementById('progressPercent').textContent = `${percent}% complete`;
+    document.getElementById('progressFill').style.width = `${percent}%`;
+  }
+  function renderCourseModules(){
+    const root = document.getElementById('moduleList');
+    root.innerHTML = '';
+    courseModules.forEach((module, index) => {
+      const box = document.createElement('div'); box.className = 'module-box';
+      const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'module-toggle';
+      const left = document.createElement('span');
+      const strong = document.createElement('strong'); strong.textContent = module.title;
+      const small = document.createElement('small'); small.textContent = `${module.desc} · ${module.lessons.filter(l=>completedLessons.has(l.id)).length}/${module.lessons.length} complete`;
+      left.append(strong,small);
+      const arrow = document.createElement('span'); arrow.textContent = '＋'; arrow.setAttribute('aria-hidden','true');
+      toggle.append(left,arrow);
+      const list = document.createElement('div'); list.className = 'module-lessons';
+      toggle.addEventListener('click',()=>{ const isOpen=box.classList.toggle('open'); arrow.textContent=isOpen?'−':'＋'; });
+      module.lessons.forEach(lesson=>{
+        const row=document.createElement('div'); row.className='lesson-row';
+        const mark=document.createElement('span'); mark.textContent=completedLessons.has(lesson.id)?'✅':'📘'; mark.setAttribute('aria-hidden','true');
+        const title=document.createElement('div'); title.className='lesson-title';
+        const name=document.createElement('strong'); name.textContent=lesson.title;
+        const meta=document.createElement('small'); meta.textContent=lesson.duration + (completedLessons.has(lesson.id)?' · Completed':' · Not completed');
+        title.append(name,meta);
+        const open=document.createElement('button'); open.type='button'; open.className='lesson-open'; open.textContent='Open lesson'; open.addEventListener('click',()=>openLesson(lesson));
+        row.append(mark,title,open); list.append(row);
+      });
+      box.append(toggle,list); root.append(box);
+    });
+  }
+  function openLesson(lesson){
+    activeLessonId=lesson.id;
+    document.getElementById('lessonViewTitle').textContent=lesson.title;
+    const body=document.getElementById('lessonViewBody'); body.innerHTML='';
+    const intro=document.createElement('p'); intro.textContent=lesson.body; body.append(intro);
+    const heading=document.createElement('strong'); heading.textContent='Key points'; body.append(heading);
+    const ul=document.createElement('ul'); lesson.points.forEach(point=>{const li=document.createElement('li');li.textContent=point;ul.append(li)}); body.append(ul);
+    const doneBtn=document.getElementById('markLessonDone');
+    doneBtn.textContent=completedLessons.has(lesson.id)?'✓ Completed — mark as not completed':'✓ Mark as completed';
+    document.getElementById('lessonView').classList.add('show');
+    document.getElementById('lessonView').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  document.getElementById('markLessonDone').addEventListener('click',()=>{
+    if(!activeLessonId) return;
+    if(completedLessons.has(activeLessonId)) completedLessons.delete(activeLessonId); else completedLessons.add(activeLessonId);
+    saveProgress(); renderCourseModules();
+    const lesson=allLessons().find(l=>l.id===activeLessonId); if(lesson) openLesson(lesson);
+  });
+
   function openDashboard() {
     if (!currentUser) { openLoginModal(); return; }
     document.getElementById('dashboardName').textContent = currentUser.displayName || 'Academy Student';
     document.getElementById('dashboardEmail').textContent = currentUser.email || 'Email not available';
     document.getElementById('dashboardAvatar').textContent = (currentUser.displayName || currentUser.email || 'A').trim().charAt(0).toUpperCase();
     dashboardMessage.textContent = '';
+    loadProgress();
     dashboardBackdrop.classList.add('show');
     document.body.classList.add('modal-open');
   }
@@ -481,6 +612,7 @@
   onAuthStateChanged(auth, user => {
     currentUser = user;
     openLoginButton.textContent = user ? 'My Account' : 'Sign In';
+    if (user) loadProgress();
   });
 </script>
 </body>
