@@ -56,6 +56,14 @@
     .dashboard-signout{border:1px solid #fda29b;color:#b42318;background:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;margin-top:18px}
     @media(max-width:520px){.dashboard-modal{padding:18px}.dashboard-grid{grid-template-columns:1fr}.dashboard-header h2{font-size:22px}}
 
+
+    .profile-form{background:#fff;border:1px solid #e3edf8;border-radius:16px;padding:18px;margin-top:16px}
+    .profile-form label{display:block;font-weight:700;font-size:14px;margin:10px 0 5px}
+    .profile-form input,.profile-form select{width:100%;padding:11px;border:1px solid #d0d5dd;border-radius:10px;font:inherit;background:#fff}
+    .profile-save{border:0;border-radius:10px;background:#0756c9;color:#fff;padding:11px 15px;font-weight:700;cursor:pointer;margin-top:12px}
+    .dashboard-section-title{font-size:18px;margin:20px 0 10px}
+    .feature-panel{background:#fff;border:1px solid #e7edf5;border-radius:16px;padding:18px;margin-top:14px}
+    .feature-panel p{font-size:14px;color:#667085}
     .learning-area{margin-top:16px}
     .learning-summary{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#eaf4ff;border:1px solid #d4e7ff;border-radius:14px;padding:14px 16px;margin-bottom:16px}
     .progress-track{height:9px;background:#d5e1ef;border-radius:20px;overflow:hidden;margin-top:8px;width:100%}
@@ -292,6 +300,17 @@
     <button class="google-action" type="button" id="googleLogin">Continue with Google</button>
     <div style="text-align:center;color:#98a2b3;margin:14px 0;font-size:13px">OR CONTINUE WITH EMAIL</div>
     <form id="emailLoginForm">
+      <div id="signupExtraFields" style="display:none">
+        <label for="signupName">Student name</label>
+        <input id="signupName" type="text" autocomplete="name" placeholder="Enter your full name">
+        <label for="signupCourse">Select course</label>
+        <select id="signupCourse">
+          <option value="Complete Computer Course">Complete Computer Course</option>
+          <option value="Typing Practice">Typing Practice</option>
+          <option value="MS Office">MS Office</option>
+          <option value="Internet & Digital Skills">Internet & Digital Skills</option>
+        </select>
+      </div>
       <label for="loginEmail">Email address</label>
       <input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
       <label for="loginPassword">Password</label>
@@ -323,9 +342,32 @@
         <span class="dashboard-tag">Signed in</span>
       </div>
     </div>
+    <div class="profile-form">
+      <h3>👤 My Profile</h3>
+      <label for="profileName">Student name</label>
+      <input id="profileName" type="text" placeholder="Enter your name">
+      <label for="profileCourse">My course</label>
+      <select id="profileCourse">
+        <option value="Complete Computer Course">Complete Computer Course</option>
+        <option value="Typing Practice">Typing Practice</option>
+        <option value="MS Office">MS Office</option>
+        <option value="Internet & Digital Skills">Internet & Digital Skills</option>
+      </select>
+      <button class="profile-save" type="button" id="saveProfile">Save Profile</button>
+      <p id="profileMessage" class="login-message" role="status" aria-live="polite"></p>
+    </div>
+    <div class="feature-panel">
+      <h3>🎬 Study Material & Videos</h3>
+      <p>Course lessons are available below. Academy videos and downloadable notes can be added here when their links are ready.</p>
+    </div>
+    <div class="feature-panel">
+      <h3>📝 My Tests</h3>
+      <p>Practice tests are coming soon. Quiz questions and scores can be added here later.</p>
+      <span class="dashboard-tag">Coming Soon</span>
+    </div>
     <div class="learning-area">
       <div class="learning-summary">
-        <div style="flex:1;min-width:180px"><strong>📚 My Course: Complete Computer Course</strong><div id="progressLabel" style="font-size:13px;color:#475467;margin-top:3px">0 of 12 lessons completed</div><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div></div>
+        <div style="flex:1;min-width:180px"><strong>📚 My Course: <span id="dashboardCourseLabel">Complete Computer Course</span></strong><div id="progressLabel" style="font-size:13px;color:#475467;margin-top:3px">0 of 12 lessons completed</div><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div></div>
         <span class="dashboard-tag" id="progressPercent">0% complete</span>
       </div>
       <h3 style="font-size:18px;margin:0 0 10px">🖥️ Course Modules & Lessons</h3>
@@ -363,6 +405,7 @@
     createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged,
     signOut
   } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+  import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyBspW4959DXO_1PbMJfHfChS9MFUg6Ntu0",
@@ -375,6 +418,7 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  const db = getFirestore(app);
   const googleProvider = new GoogleAuthProvider();
   const loginBackdrop = document.getElementById('loginBackdrop');
   const loginMessage = document.getElementById('loginMessage');
@@ -405,6 +449,8 @@
     emailButton.textContent = enabled ? 'Create Account' : 'Sign In';
     createButton.textContent = enabled ? 'Back to Sign In' : 'Create account';
     document.getElementById('loginPassword').autocomplete = enabled ? 'new-password' : 'current-password';
+    document.getElementById('signupExtraFields').style.display = enabled ? 'block' : 'none';
+    document.getElementById('signupName').required = enabled;
     showMessage('');
   }
   function friendlyError(error) {
@@ -431,6 +477,59 @@
   loginBackdrop.addEventListener('click', e => { if (e.target === loginBackdrop) closeLoginModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && loginBackdrop.classList.contains('show')) closeLoginModal(); });
 
+  async function saveStudentProfile(user, name, course) {
+    const safeName = (name || user.displayName || '').trim() || 'Academy Student';
+    const safeCourse = course || 'Complete Computer Course';
+    await setDoc(doc(db, 'students', user.uid), {
+      uid: user.uid,
+      name: safeName,
+      email: user.email || '',
+      course: safeCourse,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    document.getElementById('dashboardName').textContent = safeName;
+    document.getElementById('dashboardAvatar').textContent = safeName.charAt(0).toUpperCase();
+    document.getElementById('profileName').value = safeName;
+    document.getElementById('profileCourse').value = safeCourse;
+    document.getElementById('dashboardCourseLabel').textContent = safeCourse;
+  }
+
+  async function loadStudentProfile(user) {
+    const profileMsg = document.getElementById('profileMessage');
+    try {
+      const snap = await getDoc(doc(db, 'students', user.uid));
+      const data = snap.exists() ? snap.data() : {};
+      const name = data.name || user.displayName || '';
+      const course = data.course || 'Complete Computer Course';
+      document.getElementById('profileName').value = name;
+      document.getElementById('profileCourse').value = course;
+      document.getElementById('dashboardName').textContent = name || 'Academy Student';
+      document.getElementById('dashboardAvatar').textContent = (name || user.email || 'A').trim().charAt(0).toUpperCase();
+      document.getElementById('dashboardCourseLabel').textContent = course;
+      if (!snap.exists()) await saveStudentProfile(user, name, course);
+    } catch (error) {
+      profileMsg.textContent = 'Profile database se load nahi hua. Firestore enable aur Rules check karein.';
+      profileMsg.style.color = '#b42318';
+    }
+  }
+
+  document.getElementById('saveProfile').addEventListener('click', async () => {
+    if (!currentUser) return;
+    const name = document.getElementById('profileName').value.trim();
+    const course = document.getElementById('profileCourse').value;
+    const msg = document.getElementById('profileMessage');
+    if (!name) { msg.textContent = 'Apna naam enter karein.'; msg.style.color = '#b42318'; return; }
+    try {
+      await saveStudentProfile(currentUser, name, course);
+      msg.textContent = 'Profile aur course Firebase mein save ho gaya.';
+      msg.style.color = '#067647';
+    } catch (error) {
+      msg.textContent = 'Save nahi hua. Firestore Database aur security Rules check karein.';
+      msg.style.color = '#b42318';
+      console.error(error);
+    }
+  });
+
   emailForm.addEventListener('submit', async e => {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value.trim();
@@ -439,7 +538,11 @@
     emailButton.textContent = createMode ? 'Creating account…' : 'Signing in…';
     try {
       if (createMode) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const displayName = document.getElementById('signupName').value.trim();
+        const selectedCourse = document.getElementById('signupCourse').value;
+        const credential = await createUserWithEmailAndPassword(auth, email, password);
+        try { await saveStudentProfile(credential.user, displayName, selectedCourse); }
+        catch (profileError) { console.error(profileError); }
         showMessage('Account ban gaya! Aap sign in ho gaye hain.');
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -456,7 +559,8 @@
   document.getElementById('googleLogin').addEventListener('click', async () => {
     showMessage('Google sign-in khul raha hai…');
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      try { await loadStudentProfile(result.user); } catch (profileError) { console.error(profileError); }
       showMessage('Google se successfully sign in ho gaye hain.');
     } catch (error) {
       showMessage(friendlyError(error), true);
@@ -584,6 +688,7 @@
     document.getElementById('dashboardAvatar').textContent = (currentUser.displayName || currentUser.email || 'A').trim().charAt(0).toUpperCase();
     dashboardMessage.textContent = '';
     loadProgress();
+    loadStudentProfile(currentUser);
     dashboardBackdrop.classList.add('show');
     document.body.classList.add('modal-open');
   }
@@ -609,10 +714,19 @@
     }
   });
 
+  let firstAuthCheck = true;
   onAuthStateChanged(auth, user => {
     currentUser = user;
     openLoginButton.textContent = user ? 'My Account' : 'Sign In';
-    if (user) loadProgress();
+    if (user) {
+      loadProgress();
+      loadStudentProfile(user);
+      if (loginBackdrop.classList.contains('show')) closeLoginModal();
+      openDashboard();
+    } else if (!firstAuthCheck) {
+      closeDashboard();
+    }
+    firstAuthCheck = false;
   });
 </script>
 </body>
