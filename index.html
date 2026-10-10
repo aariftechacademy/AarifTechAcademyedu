@@ -41,6 +41,20 @@
     .login-links{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;font-size:14px}
     .login-links button{border:0;background:none;color:#0756c9;cursor:pointer;font-weight:700}
     .login-message{margin-top:12px;font-size:13px;color:#b42318;min-height:18px}
+    .dashboard-backdrop{display:none;position:fixed;inset:0;background:#10182899;z-index:1001;align-items:center;justify-content:center;padding:18px}
+    .dashboard-backdrop.show{display:flex}
+    .dashboard-modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:#f7faff;border-radius:22px;padding:26px;box-shadow:0 24px 80px #0003;position:relative}
+    .dashboard-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px;padding-right:40px}
+    .dashboard-header h2{font-size:26px;color:#172033}
+    .dashboard-user{background:#fff;border:1px solid #e3edf8;border-radius:16px;padding:18px;display:flex;align-items:center;gap:14px;margin-bottom:18px;overflow-wrap:anywhere}
+    .dashboard-avatar{width:52px;height:52px;border-radius:50%;background:#dceeff;color:#0756c9;display:grid;place-items:center;font-size:22px;font-weight:800;flex-shrink:0}
+    .dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .dashboard-card{background:#fff;border:1px solid #e7edf5;border-radius:16px;padding:18px}
+    .dashboard-card h3{font-size:17px;margin-bottom:8px;color:#172033}
+    .dashboard-card p{font-size:14px;color:#667085}
+    .dashboard-tag{display:inline-block;padding:4px 9px;border-radius:20px;background:#eef8ff;color:#0756c9;font-size:12px;font-weight:700;margin-top:8px}
+    .dashboard-signout{border:1px solid #fda29b;color:#b42318;background:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;margin-top:18px}
+    @media(max-width:520px){.dashboard-modal{padding:18px}.dashboard-grid{grid-template-columns:1fr}.dashboard-header h2{font-size:22px}}
     body.modal-open{overflow:hidden}
     .hero{padding:78px 0 70px;background:linear-gradient(135deg,#eaf4ff,#fff)}
     .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:45px;align-items:center}
@@ -262,6 +276,34 @@
   </div>
 </div>
 
+<div class="dashboard-backdrop" id="dashboardBackdrop" role="dialog" aria-modal="true" aria-labelledby="dashboardTitle">
+  <div class="dashboard-modal">
+    <button class="modal-close" type="button" id="closeDashboard" aria-label="Close dashboard">×</button>
+    <div class="dashboard-header">
+      <div>
+        <div class="brand" style="font-size:15px;margin-bottom:5px"><img src="logo.png" alt="" class="logo-img" style="width:34px;height:34px"> Aarif Tech Academy</div>
+        <h2 id="dashboardTitle">My Account / Dashboard</h2>
+      </div>
+    </div>
+    <div class="dashboard-user">
+      <div class="dashboard-avatar" id="dashboardAvatar">A</div>
+      <div style="min-width:0">
+        <strong id="dashboardName">Academy Student</strong>
+        <p id="dashboardEmail" style="color:#667085;font-size:14px;overflow-wrap:anywhere"></p>
+        <span class="dashboard-tag">Signed in</span>
+      </div>
+    </div>
+    <div class="dashboard-grid">
+      <div class="dashboard-card"><h3>📚 My Course</h3><p>Complete Computer Course</p><span class="dashboard-tag">3 Months · Coming Soon</span></div>
+      <div class="dashboard-card"><h3>🖥️ Learning Modules</h3><p>Computer Basics, Typing, MS Office, Internet & Digital Skills.</p></div>
+      <div class="dashboard-card"><h3>📈 Learning Progress</h3><p>Progress tracking will appear here when lessons and progress saving are connected.</p><span class="dashboard-tag">Not started</span></div>
+      <div class="dashboard-card"><h3>💬 Need Help?</h3><p>For course and account queries, contact the academy team on WhatsApp.</p><a class="btn" style="margin-top:10px" href="https://wa.me/916392674230" target="_blank" rel="noopener">Contact Academy</a></div>
+    </div>
+    <button class="dashboard-signout" type="button" id="dashboardSignOut">Sign Out</button>
+    <p class="login-message" id="dashboardMessage" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
 <footer>
   <div class="container">
     <strong>Aarif Tech Academy</strong>
@@ -400,23 +442,45 @@
 
   createButton.addEventListener('click', () => setCreateMode(!createMode));
 
-  onAuthStateChanged(auth, user => {
-    const openButton = document.getElementById('openLogin');
-    if (user) {
-      openButton.textContent = 'Sign Out';
-      openButton.onclick = async () => {
-        try {
-          await signOut(auth);
-          showMessage('Sign out ho gaye hain.');
-          setCreateMode(false);
-        } catch (error) { showMessage(friendlyError(error), true); }
-      };
-      openButton.removeEventListener('click', openLoginModal);
-    } else {
-      openButton.textContent = 'Sign In';
-      openButton.onclick = null;
-      openButton.addEventListener('click', openLoginModal);
+  const openLoginButton = document.getElementById('openLogin');
+  const dashboardBackdrop = document.getElementById('dashboardBackdrop');
+  const dashboardMessage = document.getElementById('dashboardMessage');
+  let currentUser = null;
+
+  function openDashboard() {
+    if (!currentUser) { openLoginModal(); return; }
+    document.getElementById('dashboardName').textContent = currentUser.displayName || 'Academy Student';
+    document.getElementById('dashboardEmail').textContent = currentUser.email || 'Email not available';
+    document.getElementById('dashboardAvatar').textContent = (currentUser.displayName || currentUser.email || 'A').trim().charAt(0).toUpperCase();
+    dashboardMessage.textContent = '';
+    dashboardBackdrop.classList.add('show');
+    document.body.classList.add('modal-open');
+  }
+  function closeDashboard() {
+    dashboardBackdrop.classList.remove('show');
+    if (!loginBackdrop.classList.contains('show')) document.body.classList.remove('modal-open');
+  }
+
+  openLoginButton.addEventListener('click', () => {
+    if (currentUser) openDashboard(); else openLoginModal();
+  });
+  document.getElementById('closeDashboard').addEventListener('click', closeDashboard);
+  dashboardBackdrop.addEventListener('click', e => { if (e.target === dashboardBackdrop) closeDashboard(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDashboard(); });
+  document.getElementById('dashboardSignOut').addEventListener('click', async () => {
+    try {
+      await signOut(auth);
+      closeDashboard();
+      showMessage('You have signed out.');
+      setCreateMode(false);
+    } catch (error) {
+      dashboardMessage.textContent = friendlyError(error);
     }
+  });
+
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    openLoginButton.textContent = user ? 'My Account' : 'Sign In';
   });
 </script>
 </body>
