@@ -508,7 +508,17 @@
       document.getElementById('dashboardCourseLabel').textContent = course;
       if (!snap.exists()) await saveStudentProfile(user, name, course);
     } catch (error) {
-      profileMsg.textContent = 'Profile database se load nahi hua. Firestore enable aur Rules check karein.';
+      console.error('Student profile load failed:', error);
+      const code = error?.code || 'unknown';
+      let help = 'Firebase Console mein Firestore Database aur Rules check karein.';
+      if (code === 'permission-denied' || code === 'firestore/permission-denied') {
+        help = 'Security Rules ne access roka hai. Firestore Rules ko signed-in user ke apne students/{uid} document tak access dena hoga.';
+      } else if (code === 'unavailable' || code === 'deadline-exceeded') {
+        help = 'Internet connection check karein aur phir dobara try karein.';
+      } else if (code === 'not-found') {
+        help = 'Firestore Database create hua hai ya nahi, Firebase Console mein check karein.';
+      }
+      profileMsg.textContent = `Profile load nahi hua (${code}). ${help}`;
       profileMsg.style.color = '#b42318';
     }
   }
@@ -524,9 +534,12 @@
       msg.textContent = 'Profile aur course Firebase mein save ho gaya.';
       msg.style.color = '#067647';
     } catch (error) {
-      msg.textContent = 'Save nahi hua. Firestore Database aur security Rules check karein.';
+      console.error('Student profile save failed:', error);
+      const code = error?.code || 'unknown';
+      msg.textContent = code === 'permission-denied'
+        ? 'Profile save nahi hua (permission-denied). Firestore Rules ne access roka hai; signed-in user ko sirf apne students/{uid} document ka access dein.'
+        : `Profile save nahi hua (${code}). Firestore Database aur Security Rules check karein.`;
       msg.style.color = '#b42318';
-      console.error(error);
     }
   });
 
@@ -541,9 +554,13 @@
         const displayName = document.getElementById('signupName').value.trim();
         const selectedCourse = document.getElementById('signupCourse').value;
         const credential = await createUserWithEmailAndPassword(auth, email, password);
-        try { await saveStudentProfile(credential.user, displayName, selectedCourse); }
-        catch (profileError) { console.error(profileError); }
-        showMessage('Account ban gaya! Aap sign in ho gaye hain.');
+        try {
+          await saveStudentProfile(credential.user, displayName, selectedCourse);
+          showMessage('Account ban gaya! Aap sign in ho gaye hain.');
+        } catch (profileError) {
+          console.error('Account created but student profile save failed:', profileError);
+          showMessage(`Account ban gaya, lekin profile save nahi hui (${profileError?.code || 'unknown'}). Firestore Rules check karein.`, true);
+        }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
         showMessage('Successfully sign in ho gaye hain.');
