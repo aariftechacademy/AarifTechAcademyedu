@@ -358,7 +358,8 @@
     </div>
     <div class="feature-panel">
       <h3>🎬 Study Material & Videos</h3>
-      <p>Course lessons are available below. Academy videos and downloadable notes can be added here when their links are ready.</p>
+      <p>Yahan Firebase se publish kiye gaye videos, notes aur PDFs dikhenge. Neeche diye gaye course lessons bhi available hain.</p>
+      <div id="firebaseMaterials" aria-live="polite" style="margin-top:12px"><p>Study material load ho raha hai...</p></div>
     </div>
     <div class="feature-panel">
       <h3>📝 My Tests</h3>
@@ -405,7 +406,7 @@
     createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged,
     signOut
   } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
-  import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyBspW4959DXO_1PbMJfHfChS9MFUg6Ntu0",
@@ -643,6 +644,46 @@
       {id:'digital-3',title:'Online Safety',duration:'7 min',body:'Protect accounts and personal information when using online services.',points:['Use unique, strong passwords','Never share one-time passwords or recovery codes','Check links and sender details before opening','Use two-step verification when available']}
     ]}
   ];
+  async function loadFirebaseMaterials() {
+    const root = document.getElementById('firebaseMaterials');
+    root.innerHTML = '';
+    try {
+      const snap = await getDocs(collection(db, 'studyMaterials'));
+      const items = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .filter(item => item.published === true)
+        .filter(item => {
+          const course = String(item.course || '').trim().toLowerCase();
+          const chosen = String(document.getElementById('profileCourse')?.value || '').trim().toLowerCase();
+          return !course || course === 'all' || course === 'all courses' || course === chosen || chosen.includes(course) || course.includes(chosen);
+        });
+      if (!items.length) {
+        const p = document.createElement('p');
+        p.textContent = 'Abhi aapke course ke liye Firebase par koi published material nahi hai. Admin Firebase Firestore ke studyMaterials collection mein record add kare.';
+        root.append(p); return;
+      }
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.style.cssText = 'border:1px solid #dbe5f3;border-radius:12px;padding:12px;margin:10px 0;background:#fff';
+        const title = document.createElement('strong'); title.textContent = item.title || 'Study Material'; card.append(title);
+        if (item.description) { const desc = document.createElement('p'); desc.textContent = item.description; desc.style.margin = '5px 0'; card.append(desc); }
+        const meta = document.createElement('small'); meta.textContent = `${item.course || 'All courses'} · ${item.type || 'material'}`; meta.style.display='block'; meta.style.color='#667085'; card.append(meta);
+        if (item.url && /^https?:\/\//i.test(String(item.url))) {
+          const link = document.createElement('a'); link.href = item.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = (String(item.type).toLowerCase() === 'pdf' || String(item.type).toLowerCase() === 'notes') ? 'Open / Download' : 'Watch / Open';
+          link.style.cssText = 'display:inline-block;margin-top:8px;color:#0756c9;font-weight:700'; card.append(link);
+        }
+        root.append(card);
+      });
+    } catch (error) {
+      console.error('Study materials load failed:', error);
+      const p = document.createElement('p');
+      p.style.color = '#b42318';
+      p.textContent = error?.code === 'permission-denied'
+        ? 'Study material read permission nahi hai. Firestore Rules mein published studyMaterials ko signed-in students ke liye read allow karein.'
+        : `Firebase se material load nahi hua (${error?.code || 'unknown'}). Firestore Database aur studyMaterials collection check karein.`;
+      root.append(p);
+    }
+  }
+
   let activeLessonId = null;
   let completedLessons = new Set();
   function progressStorageKey(){ return 'ata_course_progress_' + (currentUser?.uid || 'guest'); }
@@ -720,6 +761,7 @@
     dashboardMessage.textContent = '';
     loadProgress();
     loadStudentProfile(currentUser);
+    loadFirebaseMaterials();
     dashboardBackdrop.classList.add('show');
     document.body.classList.add('modal-open');
   }
