@@ -506,7 +506,15 @@
       document.getElementById('dashboardName').textContent = name || 'Academy Student';
       document.getElementById('dashboardAvatar').textContent = (name || user.email || 'A').trim().charAt(0).toUpperCase();
       document.getElementById('dashboardCourseLabel').textContent = course;
-      if (!snap.exists()) await saveStudentProfile(user, name, course);
+      // Do not write a default profile during loading. Account creation saves the
+      // student's chosen name/course separately; this avoids competing writes.
+      if (!snap.exists()) {
+        document.getElementById('profileMessage').textContent =
+          'Profile abhi save nahi hai. Naam aur course check karke Save Profile dabayein.';
+        document.getElementById('profileMessage').style.color = '#b54708';
+      } else {
+        profileMsg.textContent = '';
+      }
     } catch (error) {
       console.error('Student profile load failed:', error);
       const code = error?.code || 'unknown';
@@ -536,9 +544,15 @@
     } catch (error) {
       console.error('Student profile save failed:', error);
       const code = error?.code || 'unknown';
-      msg.textContent = code === 'permission-denied'
-        ? 'Profile save nahi hua (permission-denied). Firestore Rules ne access roka hai; signed-in user ko sirf apne students/{uid} document ka access dein.'
-        : `Profile save nahi hua (${code}). Firestore Database aur Security Rules check karein.`;
+      if (code === 'permission-denied' || code === 'firestore/permission-denied') {
+        msg.textContent = 'Profile save nahi hua (permission-denied). Firebase Console > Firestore Database > Rules mein students/{uid} ke liye signed-in user ko apne UID par read/write permission dein.';
+      } else if (code === 'not-found' || code === 'firestore/not-found') {
+        msg.textContent = 'Firestore Database nahi mil raha. Firebase Console mein Firestore Database create karein.';
+      } else if (code === 'unavailable' || code === 'deadline-exceeded') {
+        msg.textContent = 'Internet ya Firebase service connection mein dikkat hai. Connection check karke dobara Save Profile dabayein.';
+      } else {
+        msg.textContent = `Profile save nahi hua (${code}). Browser Console ka exact error aur Firestore Database/Rules check karna hoga.`;
+      }
       msg.style.color = '#b42318';
     }
   });
