@@ -676,10 +676,9 @@
     } catch (error) {
       console.error('Study materials load failed:', error);
       const p = document.createElement('p');
-      p.style.color = '#b42318';
+      p.style.color = '#667085';
       p.textContent = error?.code === 'permission-denied'
-        ? 'Study material read permission nahi hai. Firestore Rules mein published studyMaterials ko signed-in students ke liye read allow karein.'
-        : `Firebase se material load nahi hua (${error?.code || 'unknown'}). Firestore Database aur studyMaterials collection check karein.`;
+        ? 'Study Materials Coming Soon! Study materials will be available soon. For more information, please contact our support team. Thank you for your patience and understanding.';
       root.append(p);
     }
   }
